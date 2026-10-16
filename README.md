@@ -72,9 +72,25 @@ MarginGuard AI is a decoupled, 3-tier operational decision-support workstation b
 
 Simulates a loyal customer order with healthy positive margin (`+$118.00` net spread) and low supplier delay (2 days), served in `<2ms` via Redis Cache HIT.
 
-### 🔴 Scenario B: Severe Leak / Negative Margin (`Halt Fulfillment & Price Intervention`)
+<p align="center">
+  <img src="screenshots/01-healthy-prime.png" alt="Healthy Prime - Approve Automatic Ingestion" width="100%">
+</p>
+
+### 🟠 Scenario B: Negative Margin (`Halt Fulfillment & Price Intervention`)
+
+A 25% discount drops the effective revenue (`$157.50`) below unit cost (`$230.00`), producing a `-$72.50` (`-46.0%`) unit loss that the deterministic guardrail flags as a critical margin leak.
+
+<p align="center">
+  <img src="screenshots/02-negative-margin.png" alt="Negative Margin - Halt Fulfillment & Price Intervention" width="100%">
+</p>
+
+### 🔴 Scenario C: Severe Leak (`Halt Fulfillment & Price Intervention`)
 
 Intercepts an anomaly where a 20% discount pushes the effective selling price (`$128.00`) below unit cost (`$195.00`), resulting in a `-$67.00` (`-52.3%`) unit loss alongside an 18-day supplier delay flagged by live TreeSHAP log-odds.
+
+<p align="center">
+  <img src="screenshots/03-severe-leak.png" alt="Severe Leak - Halt Fulfillment & Price Intervention" width="100%">
+</p>
 
 ---
 
