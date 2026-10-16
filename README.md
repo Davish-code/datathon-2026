@@ -32,6 +32,8 @@ graph TD
         N -->|Margin < $0 OR High Leak Risk| O[🔴 HALT FULFILLMENT & AUDIT PRICING]
         N -->|Margin > $0 AND Low Risk| P[🟢 APPROVE AUTOMATIC INGESTION]
     end
+```
+---
 ## 🎯 1. The Problem & Dataset Evidence
 
 In modern enterprise retail, critical operational data lives in disconnected silos—Marketing issues discounts, Finance updates unit costs, and Supply Chain tracks supplier delays independently. Because these systems sync in batches rather than real-time, companies unknowingly fulfill orders that bleed revenue.
