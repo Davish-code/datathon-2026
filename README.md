@@ -91,7 +91,7 @@ Intercepts an anomaly where a 20% discount pushes the effective selling price (`
 <p align="center">
   <img src="screenshots/03-severe-leak.png" alt="Severe Leak - Halt Fulfillment & Price Intervention" width="100%">
 </p>
----
+
 ### 📋 Live Audit Logs (Stream 04)
 
 Every order the engine checks is saved in a live audit table showing unit price, unit cost, net spread, predicted leak risk, and the action taken. Healthy orders are auto-dispatched, and critical ones are halted for pricing review.
