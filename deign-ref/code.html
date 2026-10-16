@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE MONEY LEAK — Operational Triage Workstation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            alabaster: '#F8FAFC',
+            carbon: '#0F172A',
+            crimson: {
+              DEFAULT: '#BE123C',
+              bg: '#FFE4E6',
+              border: '#FECDD3'
+            },
+            amber: {
+              DEFAULT: '#B45309',
+              bg: '#FEF3C7',
+              border: '#FDE68A'
+            },
+            emerald: {
+              DEFAULT: '#047857',
+              bg: '#D1FAE5',
+              border: '#A7F3D0'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-900 font-sans min-h-screen antialiased flex flex-col selection:bg-slate-200">
+
+  <!-- 1. Top Editorial Masthead Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded bg-slate-900 flex items-center justify-center text-white font-mono font-bold text-sm tracking-tighter">
+          ML
+        </div>
+        <div class="flex items-baseline space-x-2.5">
+          <h1 class="text-base font-bold text-[#0F172A] tracking-tight uppercase">
+            THE MONEY LEAK <span class="text-slate-400 font-normal">//</span> REVENUE &amp; MARGIN TRIAGE
+          </h1>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300 tracking-wide font-mono">
+            TRACK 04 • RETAIL OPERATIONS
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <div class="hidden md:flex items-center space-x-2 text-xs text-slate-500 font-mono">
+          <span>LATENCY: <strong class="text-slate-800 font-semibold tabular-nums" id="latencyDisplay">18ms</strong></span>
+          <span class="text-slate-300">•</span>
+          <span>REVISION: <strong class="text-slate-800 font-semibold">2025.11-v2</strong></span>
+        </div>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs shadow-xs">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="font-mono text-[11px] text-slate-700 font-medium tracking-tight" id="cacheBadge">
+            MEMURAI REDIS: STANDBY | FASTAPI: ONLINE
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sub-bar Banner / Context -->
+  <div class="bg-white/80 border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-2 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center space-x-2 font-mono">
+      <span class="text-slate-400">ENVIRONMENT:</span>
+      <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">PRODUCTION SILO 03</span>
+      <span class="text-slate-400">MODEL ARTIFACT:</span>
+      <span class="text-slate-700 font-medium">lightgbm_risk_xgb_ens_v4.joblib</span>
+    </div>
+    <div class="font-mono text-[11px] text-slate-400">
+      SNAPSHOT CADENCE: REAL-TIME STREAMING INGESTION
+    </div>
+  </div>
+
+  <main class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+    
+    <!-- 2. Row 1: Executive Dataset Strip (4 Hairline-Bordered White Metric Cells) -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Dataset Strip">
+      <!-- Cell 1 -->
+      <div class="bg-white border border-slate-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-colors">
+        <div class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 font-mono flex items-center justify-between">
+          <span>MERGED RECORDS (POLARS)</span>
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z" />
+          </svg>
+        </div>
+        <div class="mt-2 text-2xl font-bold font-mono tracking-tight text-[#0F172A] tabular-nums">
+          18,027
+        </div>
+        <div class="mt-1 text-xs text-slate-500 flex items-center gap-1.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+          5 Relational Tables Joined
+        </div>
+      </div>
+
+      <!-- Cell 2 -->
+      <div class="bg-white border border-slate-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-colors">
+        <div class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 font-mono flex items-center justify-between">
+          <span>BASELINE LEAK RATE</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200 font-mono font-bold">+1.8%</span>
+        </div>
+        <div class="mt-2 text-2xl font-bold font-mono tracking-tight text-[#0F172A] tabular-nums">
+          18.27%
+        </div>
+        <div class="mt-1 text-xs text-slate-500 flex items-center gap-1.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+          3,125 Cancelled / Returned
+        </div>
+      </div>
+
+      <!-- Cell 3 -->
+      <div class="bg-white border border-slate-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-colors">
+        <div class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 font-mono flex items-center justify-between">
+          <span>NEGATIVE MARGIN ANOMALIES</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-100 text-[#BE123C] border border-rose-200 font-mono font-bold">CRITICAL</span>
+        </div>
+        <div class="mt-2 text-2xl font-bold font-mono tracking-tight text-[#BE123C] tabular-nums">
+          6,153
+        </div>
+        <div class="mt-1 text-xs text-slate-500 flex items-center gap-1.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#BE123C]"></span>
+          Unit Cost &gt; Selling Price Flagged
+        </div>
+      </div>
+
+      <!-- Cell 4 -->
+      <div class="bg-white border border-slate-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-colors">
+        <div class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 font-mono flex items-center justify-between">
+          <span>VALIDATION SPLIT</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">OUT-OF-TIME</span>
+        </div>
+        <div class="mt-2 text-2xl font-bold font-mono tracking-tight text-[#0F172A]">
+          TEMPORAL
+        </div>
+        <div class="mt-1 text-xs text-slate-500 flex items-center gap-1.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          Nov 2025 Cutoff (Rule 07)
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Row 2: Main Operational Workspace (Split 5 Columns Left / 7 Columns Right) -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" aria-label="Main Operational Workspace">
+      
+      <!-- LEFT PANEL (5 Cols) — Transaction & Inventory Signal Simulator -->
+      <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+        
+        <!-- Panel Header -->
+        <div class="px-5 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-[#0F172A] tracking-tight uppercase flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              Signal Simulator &amp; Order Vector
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">High-density telemetry inputs for real-time loss prediction</p>
+          </div>
+          <button type="button" onclick="loadBenchmarkScenario()" class="text-[11px] font-mono font-medium text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded px-2.5 py-1 bg-white shadow-2xs transition-colors">
+            LOAD ANOMALY
+          </button>
+        </div>
+
+        <!-- Simulator Form Grid -->
+        <form id="triageForm" onsubmit="event.preventDefault(); runDiagnosis();" class="p-5 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <!-- Category -->
+            <div class="space-y-1.5">
+              <label for="category" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Product Category
+              </label>
+              <div class="relative">
+                <select id="category" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-medium text-slate-900 transition-colors shadow-2xs appearance-none">
+                  <option value="Electronics" selected>Electronics</option>
+                  <option value="Home">Home</option>
+                  <option value="Grocery">Grocery</option>
+                  <option value="Fashion">Fashion</option>
+                  <option value="Sports">Sports</option>
+                  <option value="Beauty">Beauty</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Segment -->
+            <div class="space-y-1.5">
+              <label for="customer_segment" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Customer Segment
+              </label>
+              <div class="relative">
+                <select id="customer_segment" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-medium text-slate-900 transition-colors shadow-2xs appearance-none">
+                  <option value="At-risk" selected>At-risk</option>
+                  <option value="New">New</option>
+                  <option value="Returning">Returning</option>
+                  <option value="Loyal">Loyal</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Channel -->
+            <div class="space-y-1.5">
+              <label for="channel" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Order Channel
+              </label>
+              <div class="relative">
+                <select id="channel" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-medium text-slate-900 transition-colors shadow-2xs appearance-none">
+                  <option value="App" selected>App</option>
+                  <option value="Web">Web</option>
+                  <option value="Store">Store</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="space-y-1.5">
+              <label for="payment_method" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Payment Method
+              </label>
+              <div class="relative">
+                <select id="payment_method" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-medium text-slate-900 transition-colors shadow-2xs appearance-none">
+                  <option value="Card">Card</option>
+                  <option value="Wallet">Wallet</option>
+                  <option value="NetBanking">NetBanking</option>
+                  <option value="Cash" selected>Cash</option>
+                  <option value="UPI">UPI</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Region -->
+            <div class="space-y-1.5">
+              <label for="region" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Fulfillment Region
+              </label>
+              <div class="relative">
+                <select id="region" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-medium text-slate-900 transition-colors shadow-2xs appearance-none">
+                  <option value="South">South</option>
+                  <option value="West">West</option>
+                  <option value="East">East</option>
+                  <option value="North" selected>North</option>
+                  <option value="Central">Central</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Discount Ratio -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label for="discount_pct" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                  Discount Ratio (0.00-0.25)
+                </label>
+              </div>
+              <input type="number" id="discount_pct" value="0.15" min="0" max="0.25" step="0.05" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-mono font-medium text-slate-900 tabular-nums transition-colors shadow-2xs">
+            </div>
+
+            <!-- Unit Selling Price -->
+            <div class="space-y-1.5">
+              <label for="unit_price" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Unit Selling Price ($)
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">$</span>
+                <input type="number" id="unit_price" value="160" min="1" step="1" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 pl-7 pr-3 text-xs font-mono font-medium text-slate-900 tabular-nums transition-colors shadow-2xs">
+              </div>
+            </div>
+
+            <!-- Unit Cost -->
+            <div class="space-y-1.5">
+              <label for="unit_cost" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Unit Cost ($)
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-400 font-mono">$</span>
+                <input type="number" id="unit_cost" value="185" min="1" step="1" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 pl-7 pr-3 text-xs font-mono font-medium text-slate-900 tabular-nums transition-colors shadow-2xs">
+              </div>
+            </div>
+
+            <!-- Stock On Hand -->
+            <div class="space-y-1.5">
+              <label for="stock_on_hand" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Stock On Hand (Units)
+              </label>
+              <input type="number" id="stock_on_hand" value="12" min="0" step="1" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-mono font-medium text-slate-900 tabular-nums transition-colors shadow-2xs">
+            </div>
+
+            <!-- Supplier Delay -->
+            <div class="space-y-1.5">
+              <label for="supplier_delay_days" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono">
+                Supplier Delay (Days)
+              </label>
+              <input type="number" id="supplier_delay_days" value="16" min="0" step="1" class="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-md py-2 px-3 text-xs font-mono font-medium text-slate-900 tabular-nums transition-colors shadow-2xs">
+            </div>
+
+          </div>
+
+          <!-- Quick Scenario Presets -->
+          <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span class="font-mono text-[11px] text-slate-400 uppercase">Test Fixtures:</span>
+            <div class="flex items-center space-x-1.5">
+              <button type="button" onclick="setPreset('severe')" class="px-2 py-0.5 rounded text-[11px] font-mono border border-slate-200 hover:bg-slate-50 text-slate-700">Severe Leak</button>
+              <button type="button" onclick="setPreset('margin')" class="px-2 py-0.5 rounded text-[11px] font-mono border border-slate-200 hover:bg-slate-50 text-slate-700">Negative Margin</button>
+              <button type="button" onclick="setPreset('healthy')" class="px-2 py-0.5 rounded text-[11px] font-mono border border-slate-200 hover:bg-slate-50 text-slate-700">Healthy Prime</button>
+            </div>
+          </div>
+
+          <!-- Bottom Action Button -->
+          <div class="pt-2">
+            <button type="button" onclick="runDiagnosis()" class="w-full bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-semibold py-3 px-4 rounded-lg tracking-wider uppercase text-xs font-mono flex items-center justify-center space-x-2 transition-all shadow-sm hover:shadow">
+              <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>EXECUTE RISK &amp; MARGIN AUDIT</span>
+            </button>
+            <p class="text-center font-mono text-[10px] text-slate-400 mt-2">
+              Runs in-memory LightGBM inference + TreeSHAP path analysis
+            </p>
+          </div>
+        </form>
+
+      </div>
+
+      <!-- RIGHT PANEL (7 Cols) — Live Decision & Explainability Stack -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- TOP CARD: Decision & Margin Audit -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-6 space-y-6">
+          
+          <!-- Card Header & Status Badge -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+            <div>
+              <div class="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-500">
+                INSPECTION VERDICT // REAL-TIME INFERENCE
+              </div>
+              <h3 class="text-lg font-bold text-[#0F172A] tracking-tight mt-0.5">
+                Audit Results &amp; Unit Economics
+              </h3>
+            </div>
+            <div>
+              <span id="probBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-100 text-slate-600 border border-slate-200 tracking-wide">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                AWAITING TELEMETRY
+              </span>
+            </div>
+          </div>
+
+          <!-- Dual Monospace Readouts on subtle #F8FAFC inner cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <!-- Readout 1: Cancellation/Return Probability -->
+            <div class="bg-[#F8FAFC] border border-slate-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono font-semibold uppercase text-slate-500 tracking-wider">
+                  CANCELLATION / RETURN PROBABILITY
+                </span>
+                <span class="text-[10px] font-mono text-slate-400">P(LEAK)</span>
+              </div>
+              <div class="mt-3 flex items-baseline gap-2">
+                <span id="leakProb" class="text-4xl font-bold font-mono tracking-tight text-[#0F172A] tabular-nums">
+                  --%
+                </span>
+                <span id="probDelta" class="text-xs font-mono font-semibold text-slate-400">
+                  (uncalculated)
+                </span>
+              </div>
+              <!-- Mini progress bar -->
+              <div class="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="probBar" class="bg-slate-400 h-full w-0 transition-all duration-500"></div>
+              </div>
+              <div class="mt-2 flex justify-between text-[10px] font-mono text-slate-400">
+                <span>0.0% BASE</span>
+                <span>THRESHOLD 45%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            <!-- Readout 2: Unit Margin Audit -->
+            <div class="bg-[#F8FAFC] border border-slate-200 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono font-semibold uppercase text-slate-500 tracking-wider">
+                  UNIT MARGIN AUDIT (PRICE - COST)
+                </span>
+                <span class="text-[10px] font-mono text-slate-400">NET SPREAD</span>
+              </div>
+              <div class="mt-3 flex items-baseline gap-2">
+                <span id="marginVal" class="text-4xl font-bold font-mono tracking-tight text-[#0F172A] tabular-nums">
+                  $--
+                </span>
+                <span id="marginPct" class="text-xs font-mono font-semibold text-slate-400">
+                  (--% margin)
+                </span>
+              </div>
+              <!-- Mini balance bar -->
+              <div class="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="marginBar" class="bg-slate-400 h-full w-0 transition-all duration-500"></div>
+              </div>
+              <div class="mt-2 flex justify-between text-[10px] font-mono text-slate-400">
+                <span id="marginCostBreakdown">Price: $160 | Cost: $185</span>
+                <span id="marginStatusLabel" class="font-medium">UNCOMMITTED</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Operational Directive Callout Box (Financial Audit Notice) -->
+          <div id="actionBanner" class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 transition-all">
+            <div class="flex items-start gap-3">
+              <div class="mt-0.5 p-1 rounded bg-slate-200 text-slate-600">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs font-mono font-bold uppercase tracking-wider text-slate-800">
+                  STANDBY // AWAITING AUDIT INVOCATION
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Select transaction features in the left simulator and click <strong>EXECUTE RISK &amp; MARGIN AUDIT</strong> to evaluate operational margin risk, cancellation likelihood, and algorithmic SHAP drivers.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BOTTOM CARD: Explainable AI — TreeSHAP Attribution Ledger -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-6 space-y-4">
+          
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+            <div>
+              <h3 class="text-sm font-bold text-[#0F172A] tracking-tight uppercase font-mono">
+                LOCAL FEATURE ATTRIBUTION (RULE 08 TREESHAP DRIVERS)
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Top 3 mathematical drivers explaining why this specific transaction was flagged
+              </p>
+            </div>
+            <div class="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              BASE EXPECTED VALUE: <span class="font-bold text-slate-800 tabular-nums">-1.498</span>
+            </div>
+          </div>
+
+          <!-- Structured container for 3 clean horizontal ledger rows -->
+          <div id="explainList" class="space-y-2.5">
+            
+            <!-- Default Placeholder Row 1 -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-lg gap-2 text-xs">
+              <div class="flex items-center space-x-3">
+                <span class="w-6 h-6 rounded bg-slate-200 font-mono text-[11px] font-bold text-slate-700 flex items-center justify-center">01</span>
+                <div>
+                  <div class="font-semibold text-slate-800">Supplier Delay Days</div>
+                  <div class="text-[11px] text-slate-500 font-mono">Current value: <span class="font-semibold text-slate-700">16 days</span> (Regional 95th Percentile)</div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-3 justify-between sm:justify-end">
+                <span class="text-xs font-medium text-slate-600 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                  Increases Leak Risk
+                </span>
+                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-slate-200 text-slate-800 border border-slate-300 tabular-nums">
+                  +0.42 log-odds
+                </span>
+              </div>
+            </div>
+
+            <!-- Default Placeholder Row 2 -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-lg gap-2 text-xs">
+              <div class="flex items-center space-x-3">
+                <span class="w-6 h-6 rounded bg-slate-200 font-mono text-[11px] font-bold text-slate-700 flex items-center justify-center">02</span>
+                <div>
+                  <div class="font-semibold text-slate-800">Negative Net Spread (Unit Price - Cost)</div>
+                  <div class="text-[11px] text-slate-500 font-mono">Current value: <span class="font-semibold text-slate-700">-$25.00</span> (Loss on sale anomaly)</div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-3 justify-between sm:justify-end">
+                <span class="text-xs font-medium text-slate-600 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                  Increases Leak Risk
+                </span>
+                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-slate-200 text-slate-800 border border-slate-300 tabular-nums">
+                  +0.38 log-odds
+                </span>
+              </div>
+            </div>
+
+            <!-- Default Placeholder Row 3 -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-lg gap-2 text-xs">
+              <div class="flex items-center space-x-3">
+                <span class="w-6 h-6 rounded bg-slate-200 font-mono text-[11px] font-bold text-slate-700 flex items-center justify-center">03</span>
+                <div>
+                  <div class="font-semibold text-slate-800">Customer Segment Risk Level</div>
+                  <div class="text-[11px] text-slate-500 font-mono">Current value: <span class="font-semibold text-slate-700">At-risk (30d Inactivity)</span></div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-3 justify-between sm:justify-end">
+                <span class="text-xs font-medium text-slate-600 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                  Increases Leak Risk
+                </span>
+                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-slate-200 text-slate-800 border border-slate-300 tabular-nums">
+                  +0.29 log-odds
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Explainer footnote -->
+          <div class="pt-2 flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span>METHOD: KERNEL/TREE SHAPLEY SAMPLING</span>
+            <span>ERROR BOUND: ±0.004</span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Additional Tabular Reference: Institutional Audit Log Table -->
+    <section class="bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+        <div>
+          <h3 class="text-xs font-bold text-[#0F172A] tracking-wider uppercase font-mono flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-slate-900"></span>
+            RECENT OPERATIONAL TRIAGE AUDIT LOGS (STREAM 04)
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Automated rule validation and human manager interventions</p>
+        </div>
+        <div class="flex items-center space-x-2 text-xs font-mono">
+          <span class="text-slate-400">FILTER:</span>
+          <span class="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700 font-medium">ALL FLAGS (312)</span>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-100/60 font-mono text-[11px] text-slate-600 uppercase">
+              <th class="py-2.5 px-4 font-semibold">TX_ID</th>
+              <th class="py-2.5 px-4 font-semibold">TIMESTAMP (UTC)</th>
+              <th class="py-2.5 px-4 font-semibold">SKU / CATEGORY</th>
+              <th class="py-2.5 px-4 font-semibold text-right">UNIT PRICE</th>
+              <th class="py-2.5 px-4 font-semibold text-right">UNIT COST</th>
+              <th class="py-2.5 px-4 font-semibold text-right">NET SPREAD</th>
+              <th class="py-2.5 px-4 font-semibold">PREDICTED LEAK RISK</th>
+              <th class="py-2.5 px-4 font-semibold">ACTION TAKEN</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 font-mono text-[11px]">
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="py-2.5 px-4 font-bold text-slate-900">TX-80491</td>
+              <td class="py-2.5 px-4 text-slate-500">2025-11-20 14:02:19</td>
+              <td class="py-2.5 px-4 font-sans text-slate-800 font-medium">Electronics • Ultra HD 4K Monitor</td>
+              <td class="py-2.5 px-4 text-right tabular-nums text-slate-900">$160.00</td>
+              <td class="py-2.5 px-4 text-right tabular-nums text-slate-900">$185.00</td>
+              <td class="py-2.5 px-4 text-right tabular-nums font-bold text-[#BE123C]">-$25.00</td>
+              <td class="py-2.5 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3]">
+                  78.4% CRITICAL
+                </span>
+              </td>
+              <td class="py-2.5 px-4 font-sans text-slate-600">Fulfillment Halted • Pricing desk review</td>
+            </tr>
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="py-2.5 px-4 font-bold text-slate-900">TX-80490</td>
+              <td class="py-2.5 px-4 text-slate-500">2025-11-20 13:58:44</td>
+              <td class="py-2.5 px-4 font-sans text-slate-800 font-medium">Home • Kitchen Stand Mixer</td>
+              <td class="py-2.5 px-4 text-right tabular-nums text-slate-900">$320.00</td>
+              <td class="py-2.5 px-4 text-right tabular-nums text-slate-900">$240.00</td>
+              <td class="py-2.5 px-4 text-right tabular-nums font-bold text-[#047857]">+$80.00</td>
+              <td class="py-2.5 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+                  46.2% ELEVATED
+                </span>
+              </td>
+              <td class="py-2.5 px-4 font-sans text-slate-600">Priority Courier Routed (Delay Risk)</td>
+            </tr>
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="py-2.5 px-4 font-bold text-slate-900">TX-80489</td>
+              <td class="py-2.5 px-4 text-slate-500">2025-11-20 13:51:02</td>
+              <td class="py-2.5 px-4 font-sans text-slate-800 font-medium">Sports • Trail Running Shoes</td>
+              <td class="py-2.5 px-4 text-right tabular-nums text-slate-900">$130.00</td>
+              <td class="py-2.5 px-4 text-right tabular-nums text-slate-900">$68.00</td>
+              <td class="py-2.5 px-4 text-right tabular-nums font-bold text-[#047857]">+$62.00</td>
+              <td class="py-2.5 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#D1FAE5] text-[#047857] border border-[#A7F3D0]">
+                  11.5% HEALTHY
+                </span>
+              </td>
+              <td class="py-2.5 px-4 font-sans text-slate-600">Auto-dispatched from Regional Hub</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 mt-auto py-3 px-4 sm:px-6 lg:px-8 text-xs text-slate-400 font-mono flex flex-wrap items-center justify-between gap-2">
+    <div>
+      THE MONEY LEAK // AUDIT ENGINE POWERED BY FASTAPI &amp; LIGHTGBM
+    </div>
+    <div class="flex items-center space-x-4">
+      <span>POLARS RELATIONAL ENGINE: ONLINE</span>
+      <span>RULE 07 &amp; RULE 08 COMPLIANT</span>
+    </div>
+  </footer>
+
+  <!-- Simulation Logic & Interactive Triage Model -->
+  <script>
+    // State & calculation logic simulating the ML & Economics engine
+    function runDiagnosis() {
+      // Gather inputs
+      const category = document.getElementById('category').value;
+      const segment = document.getElementById('customer_segment').value;
+      const channel = document.getElementById('channel').value;
+      const payment = document.getElementById('payment_method').value;
+      const region = document.getElementById('region').value;
+      const discount = parseFloat(document.getElementById('discount_pct').value) || 0;
+      const price = parseFloat(document.getElementById('unit_price').value) || 0;
+      const cost = parseFloat(document.getElementById('unit_cost').value) || 0;
+      const stock = parseInt(document.getElementById('stock_on_hand').value) || 0;
+      const delay = parseInt(document.getElementById('supplier_delay_days').value) || 0;
+
+      // Update telemetry badge
+      const cacheBadge = document.getElementById('cacheBadge');
+      cacheBadge.innerHTML = 'MEMURAI REDIS: HIT (0.4ms) | INFERENCE: COMPLETE';
+      document.getElementById('latencyDisplay').innerText = Math.floor(Math.random() * 8 + 12) + 'ms';
+
+      // 1. Calculate Unit Margin Spread
+      const effectiveRevenue = price * (1 - discount);
+      const margin = effectiveRevenue - cost;
+      const marginPct = effectiveRevenue > 0 ? ((margin / effectiveRevenue) * 100).toFixed(1) : '-100';
+
+      const marginElem = document.getElementById('marginVal');
+      const marginPctElem = document.getElementById('marginPct');
+      const marginBar = document.getElementById('marginBar');
+      const marginStatusLabel = document.getElementById('marginStatusLabel');
+      const marginCostBreakdown = document.getElementById('marginCostBreakdown');
+
+      marginCostBreakdown.innerText = `Eff. Rev: $${effectiveRevenue.toFixed(2)} | Cost: $${cost.toFixed(2)}`;
+
+      if (margin < 0) {
+        marginElem.innerText = `-$${Math.abs(margin).toFixed(2)}`;
+        marginElem.className = 'text-4xl font-bold font-mono tracking-tight text-[#BE123C] tabular-nums';
+        marginPctElem.innerText = `(${marginPct}% loss)`;
+        marginPctElem.className = 'text-xs font-mono font-semibold text-[#BE123C]';
+        marginBar.className = 'bg-[#BE123C] h-full transition-all duration-500';
+        marginBar.style.width = '100%';
+        marginStatusLabel.innerText = 'NEGATIVE SPREAD (CRITICAL)';
+        marginStatusLabel.className = 'font-bold text-[#BE123C]';
+      } else {
+        marginElem.innerText = `+$${margin.toFixed(2)}`;
+        marginElem.className = 'text-4xl font-bold font-mono tracking-tight text-[#047857] tabular-nums';
+        marginPctElem.innerText = `(+${marginPct}% margin)`;
+        marginPctElem.className = 'text-xs font-mono font-semibold text-[#047857]';
+        marginBar.className = 'bg-[#047857] h-full transition-all duration-500';
+        marginBar.style.width = Math.min(100, Math.max(10, marginPct * 1.5)) + '%';
+        marginStatusLabel.innerText = 'POSITIVE SPREAD';
+        marginStatusLabel.className = 'font-bold text-[#047857]';
+      }
+
+      // 2. Cancellation / Return Leak Probability Formula
+      // Base risk
+      let riskScore = 0.1827; // Baseline 18.27%
+
+      // Delay impact
+      if (delay > 14) riskScore += 0.28;
+      else if (delay > 7) riskScore += 0.14;
+      else if (delay > 3) riskScore += 0.05;
+
+      // Segment impact
+      if (segment === 'At-risk') riskScore += 0.19;
+      else if (segment === 'New') riskScore += 0.08;
+      else if (segment === 'Returning') riskScore -= 0.04;
+      else if (segment === 'Loyal') riskScore -= 0.12;
+
+      // Payment method impact
+      if (payment === 'Cash') riskScore += 0.15; // High return on COD
+      else if (payment === 'Card') riskScore -= 0.03;
+
+      // Margin inversion impact
+      if (margin < 0) riskScore += 0.16;
+
+      // Category factor
+      if (category === 'Fashion') riskScore += 0.12; // High return rate
+      if (category === 'Electronics' && delay > 10) riskScore += 0.10;
+
+      // Stock shortage factor
+      if (stock < 5) riskScore += 0.09;
+
+      // Bound between 0.03 and 0.96
+      riskScore = Math.max(0.03, Math.min(0.96, riskScore));
+      const riskPercent = (riskScore * 100).toFixed(1);
+
+      // Render Probability UI
+      const leakProbElem = document.getElementById('leakProb');
+      const probDeltaElem = document.getElementById('probDelta');
+      const probBar = document.getElementById('probBar');
+      const probBadge = document.getElementById('probBadge');
+
+      leakProbElem.innerText = `${riskPercent}%`;
+      probBar.style.width = `${riskPercent}%`;
+
+      // Status pill & directive logic
+      const actionBanner = document.getElementById('actionBanner');
+
+      if (riskScore >= 0.55 || margin < 0) {
+        // High Risk / Severe Leak
+        probBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#BE123C] animate-pulse"></span> HIGH LEAK SEVERITY';
+        probBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3] tracking-wide';
+        leakProbElem.className = 'text-4xl font-bold font-mono tracking-tight text-[#BE123C] tabular-nums';
+        probDeltaElem.innerText = `(+${(riskPercent - 18.27).toFixed(1)}% vs baseline)`;
+        probDeltaElem.className = 'text-xs font-mono font-semibold text-[#BE123C]';
+        probBar.className = 'bg-[#BE123C] h-full transition-all duration-500';
+
+        actionBanner.className = 'p-4 rounded-lg bg-[#FFE4E6]/50 border border-[#FECDD3] text-slate-800 transition-all';
+        actionBanner.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 p-1 rounded bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3]">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-mono font-bold uppercase tracking-wider text-[#BE123C]">
+                OPERATIONAL DIRECTIVE: HALT FULFILLMENT &amp; PRICE INTERVENTION
+              </div>
+              <p class="text-xs text-slate-700 leading-relaxed">
+                Order flagged under <strong>Rule 04 (Negative Unit Economics)</strong> and <strong>Rule 08 (High Cancellation Propensity)</strong>. Immediate manager action required: review promotional discount ratio or reroute shipping to a low-latency regional warehouse to avert cancellation loss.
+              </p>
+            </div>
+          </div>
+        `;
+      } else if (riskScore >= 0.35) {
+        // Moderate / Supply Delay Risk
+        probBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#B45309]"></span> ELEVATED ATTENTION';
+        probBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] tracking-wide';
+        leakProbElem.className = 'text-4xl font-bold font-mono tracking-tight text-[#B45309] tabular-nums';
+        probDeltaElem.innerText = `(+${(riskPercent - 18.27).toFixed(1)}% vs baseline)`;
+        probDeltaElem.className = 'text-xs font-mono font-semibold text-[#B45309]';
+        probBar.className = 'bg-[#B45309] h-full transition-all duration-500';
+
+        actionBanner.className = 'p-4 rounded-lg bg-[#FEF3C7]/40 border border-[#FDE68A] text-slate-800 transition-all';
+        actionBanner.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 p-1 rounded bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-mono font-bold uppercase tracking-wider text-[#B45309]">
+                OPERATIONAL DIRECTIVE: EXPEDITE LOGISTICS NOTIFICATION
+              </div>
+              <p class="text-xs text-slate-700 leading-relaxed">
+                Elevated cancellation hazard detected due to lead-time friction. Suggest automated outbound customer SMS with real-time tracking and an instant 5% store-credit goodwill voucher to safeguard order completion.
+              </p>
+            </div>
+          </div>
+        `;
+      } else {
+        // Healthy / Low Risk
+        probBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#047857]"></span> HEALTHY UNIT ECONOMICS';
+        probBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#D1FAE5] text-[#047857] border border-[#A7F3D0] tracking-wide';
+        leakProbElem.className = 'text-4xl font-bold font-mono tracking-tight text-[#047857] tabular-nums';
+        probDeltaElem.innerText = `(${(riskPercent - 18.27).toFixed(1)}% vs baseline)`;
+        probDeltaElem.className = 'text-xs font-mono font-semibold text-[#047857]';
+        probBar.className = 'bg-[#047857] h-full transition-all duration-500';
+
+        actionBanner.className = 'p-4 rounded-lg bg-[#D1FAE5]/40 border border-[#A7F3D0] text-slate-800 transition-all';
+        actionBanner.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 p-1 rounded bg-[#D1FAE5] text-[#047857] border border-[#A7F3D0]">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-mono font-bold uppercase tracking-wider text-[#047857]">
+                OPERATIONAL DIRECTIVE: APPROVE AUTOMATIC INGESTION
+              </div>
+              <p class="text-xs text-slate-700 leading-relaxed">
+                Order exhibits robust contribution margins and nominal cancellation exposure. Clear for immediate automated picking, packing, and carrier dispatch under standard SLA.
+              </p>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. TreeSHAP Attribution Drivers (Local Explanation Rows)
+      generateSHAPDrivers(margin, delay, segment, payment, discount, stock);
+    }
+
+    function generateSHAPDrivers(margin, delay, segment, payment, discount, stock) {
+      const explainList = document.getElementById('explainList');
+      const drivers = [];
+
+      // Driver evaluation based on inputs
+      if (delay > 10) {
+        drivers.push({
+          name: 'Supplier Delay Duration',
+          val: `${delay} days lead time`,
+          impact: '+' + (0.35 + (delay - 10) * 0.02).toFixed(2) + ' log-odds',
+          risk: true,
+          label: 'Increases Leak Risk'
+        });
+      } else {
+        drivers.push({
+          name: 'Supplier Delivery Window',
+          val: `${delay} days (Within 72h benchmark)`,
+          impact: '-' + (0.22 - delay * 0.02).toFixed(2) + ' log-odds',
+          risk: false,
+          label: 'Stabilizes Order'
+        });
+      }
+
+      if (margin < 0) {
+        drivers.push({
+          name: 'Negative Unit Margin Spread',
+          val: `-$${Math.abs(margin).toFixed(2)} unit contribution`,
+          impact: '+0.41 log-odds',
+          risk: true,
+          label: 'Increases Leak Risk'
+        });
+      } else {
+        drivers.push({
+          name: 'Healthy Unit Net Margin',
+          val: `+$${margin.toFixed(2)} contribution margin`,
+          impact: '-0.36 log-odds',
+          risk: false,
+          label: 'Stabilizes Order'
+        });
+      }
+
+      if (segment === 'At-risk') {
+        drivers.push({
+          name: 'Customer Retention Cohort',
+          val: 'Segment: At-risk (dormancy flag)',
+          impact: '+0.29 log-odds',
+          risk: true,
+          label: 'Increases Leak Risk'
+        });
+      } else if (segment === 'Loyal') {
+        drivers.push({
+          name: 'Customer Loyalty Tier',
+          val: 'Segment: Loyal (>5 past orders)',
+          impact: '-0.45 log-odds',
+          risk: false,
+          label: 'Stabilizes Order'
+        });
+      } else if (payment === 'Cash') {
+        drivers.push({
+          name: 'Payment Settlement Friction',
+          val: 'Cash on Delivery (COD anomaly)',
+          impact: '+0.27 log-odds',
+          risk: true,
+          label: 'Increases Leak Risk'
+        });
+      } else {
+        drivers.push({
+          name: 'Promotional Discount Pressure',
+          val: `Discount ratio: ${(discount * 100).toFixed(0)}%`,
+          impact: discount > 0.15 ? '+0.18 log-odds' : '-0.12 log-odds',
+          risk: discount > 0.15,
+          label: discount > 0.15 ? 'Increases Leak Risk' : 'Stabilizes Order'
+        });
+      }
+
+      // Render 3 rows
+      explainList.innerHTML = drivers.slice(0, 3).map((d, idx) => {
+        const badgeColor = d.risk 
+          ? 'bg-[#FFE4E6] text-[#BE123C] border-[#FECDD3]'
+          : 'bg-[#D1FAE5] text-[#047857] border-[#A7F3D0]';
+        const dotColor = d.risk ? 'bg-[#BE123C]' : 'bg-[#047857]';
+
+        return `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-lg gap-2 text-xs transition-colors hover:bg-slate-100/70">
+            <div class="flex items-center space-x-3">
+              <span class="w-6 h-6 rounded bg-white border border-slate-200 font-mono text-[11px] font-bold text-slate-700 flex items-center justify-center shadow-2xs">0${idx + 1}</span>
+              <div>
+                <div class="font-semibold text-slate-900">${d.name}</div>
+                <div class="text-[11px] text-slate-500 font-mono">Current value: <span class="font-semibold text-slate-700">${d.val}</span></div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-3 justify-between sm:justify-end">
+              <span class="text-xs font-medium text-slate-600 flex items-center gap-1.5 font-sans">
+                <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+                ${d.label}
+              </span>
+              <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold border tabular-nums ${badgeColor}">
+                ${d.impact}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Scenarios helper
+    function setPreset(type) {
+      if (type === 'severe') {
+        document.getElementById('category').value = 'Electronics';
+        document.getElementById('customer_segment').value = 'At-risk';
+        document.getElementById('channel').value = 'App';
+        document.getElementById('payment_method').value = 'Cash';
+        document.getElementById('region').value = 'North';
+        document.getElementById('discount_pct').value = 0.20;
+        document.getElementById('unit_price').value = 160;
+        document.getElementById('unit_cost').value = 195;
+        document.getElementById('stock_on_hand').value = 3;
+        document.getElementById('supplier_delay_days').value = 18;
+      } else if (type === 'margin') {
+        document.getElementById('category').value = 'Home';
+        document.getElementById('customer_segment').value = 'Returning';
+        document.getElementById('channel').value = 'Web';
+        document.getElementById('payment_method').value = 'Card';
+        document.getElementById('region').value = 'West';
+        document.getElementById('discount_pct').value = 0.25;
+        document.getElementById('unit_price').value = 210;
+        document.getElementById('unit_cost').value = 230;
+        document.getElementById('stock_on_hand').value = 15;
+        document.getElementById('supplier_delay_days').value = 4;
+      } else if (type === 'healthy') {
+        document.getElementById('category').value = 'Sports';
+        document.getElementById('customer_segment').value = 'Loyal';
+        document.getElementById('channel').value = 'Store';
+        document.getElementById('payment_method').value = 'UPI';
+        document.getElementById('region').value = 'South';
+        document.getElementById('discount_pct').value = 0.05;
+        document.getElementById('unit_price').value = 240;
+        document.getElementById('unit_cost').value = 110;
+        document.getElementById('stock_on_hand').value = 45;
+        document.getElementById('supplier_delay_days').value = 2;
+      }
+      runDiagnosis();
+    }
+
+    function loadBenchmarkScenario() {
+      setPreset('severe');
+    }
+
+    // Initialize on first load
+    window.addEventListener('DOMContentLoaded', () => {
+      runDiagnosis();
+    });
+  </script>
+</body>
+</html>
