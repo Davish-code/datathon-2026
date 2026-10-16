@@ -103,11 +103,48 @@ Every order the engine checks is saved in a live audit table showing unit price,
 
 ## 📁 5. Repository Structure & Dataset Mapping
 
-- `notebooks/01_eda_and_train.ipynb` — Complete Polars data loading pipeline, 5-table relational joins (`campaigns.csv`, `customers.csv`, `inventory.csv`, `products.csv`, `transactions.csv`), SQLite/DuckDB creation (`Data/money_leak.db`), Rule 07 temporal split, and local XGBoost training from scratch.
-- `models/xgboost_v1.joblib` & `models/model_meta.joblib` — Serialized custom XGBoost model and metadata artifacts.
-- `backend/main.py` — FastAPI REST server (`/predict` endpoint), deterministic margin guardrail, live TreeSHAP `pred_contribs` extraction, and Redis caching layer.
-- `backend/requirements.txt` — Python dependencies (`fastapi`, `uvicorn`, `xgboost`, `polars`, `pandas`, `scikit-learn`, `joblib`, `redis`).
-- `frontend/index.html` & `frontend/app.js` — Light-theme operational triage workstation UI with real-time telemetry simulator, preset test fixtures, and live TreeSHAP attribution ledger.
+```text
+datathon-2026/
+├── 📂 Data/
+│   ├── 📂 raw/
+│   │   ├── campaigns.csv
+│   │   ├── customers.csv
+│   │   ├── inventory.csv
+│   │   ├── products.csv
+│   │   ├── transactions.csv
+│   │   └── README.txt
+│   └── money_leak.db
+├── 📂 backend/
+│   ├── main.py
+│   └── requirements.txt
+├── 📂 frontend/
+│   ├── index.html
+│   └── app.js
+├── 📂 models/
+│   ├── xgboost_v1.joblib
+│   └── model_meta.joblib
+├── 📂 notebooks/
+│   └── 01_eda_and_train.ipynb
+├── 📂 screenshots/
+│   ├── 01-healthy-prime.png
+│   ├── 02-negative-margin.png
+│   ├── 03-severe-leak.png
+│   └── 04-audit-logs.png
+└── README.md
+```
+
+### 🗂️ What each part does
+
+| Path | What it does |
+|---|---|
+| `Data/raw/` | The 5 raw CSV tables (campaigns, customers, inventory, products, transactions) |
+| `Data/money_leak.db` | SQLite/DuckDB database created after the 5-table joins |
+| `notebooks/01_eda_and_train.ipynb` | Polars data loading, joins, Rule 07 temporal split, and local XGBoost training from scratch |
+| `models/` | Saved XGBoost model (`xgboost_v1.joblib`) and its metadata (`model_meta.joblib`) |
+| `backend/main.py` | FastAPI server with the `/predict` endpoint, margin guardrail, TreeSHAP `pred_contribs`, and Redis caching |
+| `backend/requirements.txt` | Python packages: `fastapi`, `uvicorn`, `xgboost`, `polars`, `pandas`, `scikit-learn`, `joblib`, `redis` |
+| `frontend/` | Operational triage workstation UI (`index.html` + `app.js`) with test fixtures and the TreeSHAP attribution ledger |
+| `screenshots/` | Output images used in this README |
 
 ---
 
